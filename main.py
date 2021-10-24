@@ -178,19 +178,20 @@ async def subnet(add: dict) -> dict:
     cidr = data1.split(".")
     # del cidr[len(cidr) - 1]
     #  Prefix
-    prefix = "/" + str(convert(data2))
-    # cidr.append("/")
-    # Convert the mask to binary
+    prefix = "/" + str(subnet_bits(data2))
+    # subnet_bits the mask to binary
     cidr.append(prefix)
     res = ".".join(cidr)
     """ Calculate the available host per subnet"""
     # formula: 2^n - 2 where n is (32 - network bits).
-    hosts_per_subnet = power(32-convert(data2)) - 2
+    hosts_per_subnet = power(32-subnet_bits(data2)) - 2
 
+    # num_subnets
+    num_subnets = power(num_subnet(data2))
     """Valid subnets"""
     subs = []
-    [subs.append(data1) for _ in range(4)]
-    n = power(32-convert(data2))
+    [subs.append(data1) for _ in range(num_subnets)]
+    n = power(32-subnet_bits(data2))
     m = 0
     l = [list(i) for i in subs]
     for x in l:
@@ -201,23 +202,25 @@ async def subnet(add: dict) -> dict:
     valid_subnets = [''.join(x) for x in l]
 
     """"broadcast addresses"""
-    broadcast_list = []
-    [broadcast_list.append(data1) for _ in range(4)]
-    m = hosts_per_subnet + 1
-    l = [list(i) for i in broadcast_list]
-    for x in l:
-        del x[len(x) - 1]
-        x.append(str(m))
-        m+= m
+    #  To get the broadcast, we convert the host bits of the network address to 1's
+    # requirement:
+        # cidr
+        # network add
+    cid = subnet_bits(data2)
+
+    to_bin = " ".join([bin(int(x)) for x in data1.split(".")])
+    # while i < len(cid):
+
+
 
 
     broadcast_add = [''.join(x) for x in l]
     # display result in JSON format.
-    return {"address_cidr": res, "num_subnets": "N/A",
+    return {"address_cidr": res, "num_subnets": num_subnets,
     "addressable_hosts_per_subnet": hosts_per_subnet,"valid_subnets":valid_subnets,
     "broadcast_addresses":broadcast_add, "first_addresses":"N/A",
-    "last_addresses":"N/A",}
-    # return cidr
+    "last_addresses":"N/A",}, cid, len(to_bin)
+    # return cidr, p
 
 
 # Calculate the power
@@ -226,15 +229,17 @@ def power(n):
 
 
 # convert mask to binary
-def convert(n):
+def subnet_bits(n):
 
     n = n.split(".")
-    res = "".join([bin(int(x)) for x in n])
+    res = " ".join([bin(int(x)) for x in n])
     num = res.count("1")
     return num
 
 
+def num_subnet(n):
 
-
-
-
+    n = n.split(".")
+    res = [bin(int(x)) for x in n]
+    num = res[-1].count("1")
+    return num
