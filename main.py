@@ -208,21 +208,27 @@ async def subnet(add: dict) -> dict:
         # network add
     cid = subnet_bits(data2)
 
-    to_bin = " ".join([bin(int(x)) for x in data1.split(".")])
-    # while i < len(cid):
-
-
-
+    num_host_bits = 32 - cid
+    b = get_broad(data1, num_host_bits)
 
     broadcast_add = [''.join(x) for x in l]
     # display result in JSON format.
     return {"address_cidr": res, "num_subnets": num_subnets,
     "addressable_hosts_per_subnet": hosts_per_subnet,"valid_subnets":valid_subnets,
     "broadcast_addresses":broadcast_add, "first_addresses":"N/A",
-    "last_addresses":"N/A",}, cid, len(to_bin)
+    "last_addresses":"N/A",}, cid, len(b), b
     # return cidr, p
 
 
+# def get_broad(string, host_bit):
+#     bin_ = " ".join([bin(int(x)) for x in string.split(".")])
+#     # i= len(bin_) -1
+#     i = 0
+#     while i < host_bit:
+#         bin_.replace("0", "1")
+#         i+=1
+
+#     return bin_
 # Calculate the power
 def power(n):
     return 2 ** n
