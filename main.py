@@ -62,14 +62,6 @@ classes={
     },
 
 }
-# Model class
-class Result(BaseModel):
-    name : str
-    num_networks: int
-    num_hosts: int
-    first_add: str
-    last_add: str
-
 
 
 @app.get("/", tags=["home"])
@@ -78,8 +70,108 @@ async def root(message:dict):
     return response
 
 
-# Function to calculate the ip class address
-# Get detail
+# IP Calculator using the getDetails function
+@app.post("/ipcalc/", tags=["ipcalc"])
+async def ipcalc(add:dict):
+    #  Extract data
+    data = add.get("address")
+    # Calculate and display results
+    return getDetails(data)
+    # return data
+
+# Subnet enpoint
+"""json
+{
+    "address": "192.168.10.0",
+    "mask": "255.255.255.192"
+}
+
+"""
+@app.post('/subnet/',tags=["subnet calculator"])
+async def subnet(add: dict) -> dict:
+    # Parse the JSON
+    data1 = add.get("address")
+    data2 = add.get("mask")
+
+    """Get the CIDR of the network"""
+    cidr = data1.split(".")
+    # convert the mask to binary
+    suffix = "/" + str(subnet_bits(data2))
+    cidr.append(suffix)
+    res = ".".join(cidr)
+
+    """ Calculate the available host per subnet"""
+    # formula: 2^n - 2 where n is (32 - network bits).
+    hosts_per_subnet = power(32-subnet_bits(data2)) - 2
+
+    # number of subnets that can be created from the IP
+    num_subnets = power(num_subnet(data2))
+
+    """Valid subnets"""
+    subs = []
+    [subs.append(data1) for _ in range(num_subnets)]
+    n = power(32-subnet_bits(data2))
+    start = 0
+    lst = [list(i) for i in subs]  # temporary list to store each ip converted to a list
+    for x in lst:
+        del x[len(x) - 1]
+        x.append(str(start))
+        start += n
+    valid_subnets = [''.join(x) for x in lst] #  Valid subnets
+
+    """"broadcast addresses"""
+
+    """First addresses"""
+    start = 1
+    f_addr = [list(i) for i in subs]
+    for x in f_addr:
+        del x[len(x) - 1]
+        x.append(str(start))
+        start += n
+
+    first_add = ["".join(x) for x in f_addr] #List of first addresses
+
+    """Last addresses"""
+    start = hosts_per_subnet
+    l_addr = [list(i) for i in subs]
+    for x in l_addr:
+        del x[len(x) - 1]
+        x.append(str(start))
+        start += n
+
+    last_add = ["".join(x) for x in l_addr] #List of last addresses
+    # display result in JSON format.
+    return {"address_cidr": res, "num_subnets": num_subnets,
+    "addressable_hosts_per_subnet": hosts_per_subnet,"valid_subnets":valid_subnets,
+    "broadcast_addresses":"N/A", "first_addresses":first_add,
+    "last_addresses":last_add,}
+
+"""Supernet calc"""
+# {
+#     "addresses":["205.100.0.0","205.100.1.0",
+#     "205.100.2.0","205.100.3.0"]
+# }
+# Default class C mask is 255.255.255.0
+# Therefore new subnet mask is 255.255.252.0
+@app.post("/supernet/", tags=["supernet calculator"])
+async def supernet(addr:dict):
+    add = addr.get("addresses")
+    cidr = add[len(add) -1]
+
+    # Add cidr suffix to each IPs in the list
+    lst = [list(i) for i in add]
+    for i in lst:
+        del i[len(i) -1]
+        i.append("/22")
+
+    new_subnet_mask = ["".join(i) for i in lst]
+    class_C_mask = "255.255.252.0"
+    return {
+    "address":new_subnet_mask,
+    "mask":class_C_mask}
+
+
+# Function to calculate the ip class address details
 def getDetails(string):
     res = string.split(".")  #Parse the JSON
     if int(res[0]) in range(0, 127):
@@ -150,85 +242,8 @@ def getDetails(string):
     , "first_address": first_address, "last_address": last_address,}
 
     return items
-db = []
-# Display results
-@app.post("/ipcalc/")
-async def ipcalc(add:dict):
-    #  Extract data
-    data = add.get("address")
-    # Calculate and display results
-    return getDetails(data)
-    # return data
 
 
-# Subnet enpoint
-"""json
-{
-    "address": "192.168.10.0",
-    "mask": "255.255.255.192"
-}
-
-"""
-@app.post('/subnet/')
-async def subnet(add: dict) -> dict:
-    data1 = add.get("address")
-    data2 = add.get("mask")
-
-    """Get the CIDR of the network"""
-    cidr = data1.split(".")
-    # del cidr[len(cidr) - 1]
-    #  Prefix
-    prefix = "/" + str(subnet_bits(data2))
-    # subnet_bits the mask to binary
-    cidr.append(prefix)
-    res = ".".join(cidr)
-    """ Calculate the available host per subnet"""
-    # formula: 2^n - 2 where n is (32 - network bits).
-    hosts_per_subnet = power(32-subnet_bits(data2)) - 2
-
-    # num_subnets
-    num_subnets = power(num_subnet(data2))
-    """Valid subnets"""
-    subs = []
-    [subs.append(data1) for _ in range(num_subnets)]
-    n = power(32-subnet_bits(data2))
-    m = 0
-    l = [list(i) for i in subs]
-    for x in l:
-        del x[len(x) - 1]
-        x.append(str(m))
-        m += n
-
-    valid_subnets = [''.join(x) for x in l]
-
-    """"broadcast addresses"""
-    #  To get the broadcast, we convert the host bits of the network address to 1's
-    # requirement:
-        # cidr
-        # network add
-    cid = subnet_bits(data2)
-
-    num_host_bits = 32 - cid
-    b = get_broad(data1, num_host_bits)
-
-    broadcast_add = [''.join(x) for x in l]
-    # display result in JSON format.
-    return {"address_cidr": res, "num_subnets": num_subnets,
-    "addressable_hosts_per_subnet": hosts_per_subnet,"valid_subnets":valid_subnets,
-    "broadcast_addresses":broadcast_add, "first_addresses":"N/A",
-    "last_addresses":"N/A",}, cid, len(b), b
-    # return cidr, p
-
-
-# def get_broad(string, host_bit):
-#     bin_ = " ".join([bin(int(x)) for x in string.split(".")])
-#     # i= len(bin_) -1
-#     i = 0
-#     while i < host_bit:
-#         bin_.replace("0", "1")
-#         i+=1
-
-#     return bin_
 # Calculate the power
 def power(n):
     return 2 ** n
