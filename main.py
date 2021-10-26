@@ -71,8 +71,19 @@ async def root(message:dict):
 
 
 # IP Calculator using the getDetails function
+
 @app.post("/ipcalc/", tags=["ipcalc"])
 async def ipcalc(add:dict):
+    """    The ipcalc function takes a JSON object as input and return a JSON format response
+                The ipcalc uses a helper function getDetails(), which takes a string as an input and return the appropriate class information such as the number of networks, number of hosts, first and last addresses of the ip address in JSON format response. E.g: Input={"address": "192.168.10.0",}
+                Response => {
+                  "class": "B",
+                  "num_networks": 16384,
+                  "num_hosts": 65536,
+                  "first_address": "128.0.0.0",
+                  "last_address": "191.255.255.255"
+                }
+            """
     #  Extract data
     data = add.get("address")
     # Calculate and display results
@@ -89,6 +100,43 @@ async def ipcalc(add:dict):
 """
 @app.post('/subnet/',tags=["subnet calculator"])
 async def subnet(add: dict) -> dict:
+    """The Subnet funtion takes a JSON item,
+    parses the data into address and mask. 
+    It then calculates the CIDR (the suffix),
+    the host per subnet using the host formula
+    (2^n - 2, where n 32 - (the number of network bits)),
+    number of subnets (2^bits borrowed), range of valid
+    subnets, IP ranges from first to last addresses.
+
+    E.g: Input = {
+        "address": "192.168.10.0",
+        "mask": "255.255.255.192"
+    }
+    Response => {
+      "address_cidr": "192.168.10.0./26",
+      "num_subnets": 4,
+      "addressable_hosts_per_subnet": 62,
+      "valid_subnets": [
+        "192.168.10.0",
+        "192.168.10.64",
+        "192.168.10.128",
+        "192.168.10.192"
+      ],
+      "broadcast_addresses": "N/A",
+      "first_addresses": [
+        "192.168.10.1",
+        "192.168.10.65",
+        "192.168.10.129",
+        "192.168.10.193"
+      ],
+      "last_addresses": [
+        "192.168.10.62",
+        "192.168.10.126",
+        "192.168.10.190",
+        "192.168.10.254"
+      ]
+    }
+    """
     # Parse the JSON
     data1 = add.get("address")
     data2 = add.get("mask")
@@ -155,6 +203,23 @@ async def subnet(add: dict) -> dict:
 # Therefore new subnet mask is 255.255.252.0
 @app.post("/supernet/", tags=["supernet calculator"])
 async def supernet(addr:dict):
+    """The Supernet function takes @parameter dict (JSON item)
+    and return a JSON format response. This function calculates
+    the CIDR and the new subnet mask of class C IP addresses.
+    E.g: Input={
+         "addresses":["205.100.0.0","205.100.1.0",
+         "205.100.2.0","205.100.3.0"]
+    }
+    Response =>{
+      "address": [
+        "205.100.0./22",
+        "205.100.1./22",
+        "205.100.2./22",
+        "205.100.3./22"
+      ],
+      "mask": "255.255.252.0"
+    }"""
+
     add = addr.get("addresses")
     cidr = add[len(add) -1]
 
